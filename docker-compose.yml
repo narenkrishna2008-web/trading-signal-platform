@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  trading-platform:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: trading-signal-platform
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/prisma/dev.db
+      - DEFAULT_TIMEZONE=Asia/Kolkata
+      - NEXT_PUBLIC_DEFAULT_SYMBOL=XAU/USD
+    volumes:
+      - platform-data:/app/prisma
+    restart: unless-stopped
+
+volumes:
+  platform-data:

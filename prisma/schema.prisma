@@ -1,0 +1,167 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Instrument {
+  id          String   @id @default(cuid())
+  symbol      String   @unique
+  assetClass  String
+  displayName String
+  config      String   // JSON string containing full InstrumentConfig
+  createdAt   DateTime @default(now())
+
+  candleRecords      CandleRecord[]
+  zoneRecords        ZoneRecord[]
+  structureEvents    StructureEventRecord[]
+  liquidityLevels    LiquidityLevelRecord[]
+  signalRecords      SignalRecord[]
+  backtestRecords    BacktestRecord[]
+}
+
+model CandleRecord {
+  id           String     @id @default(cuid())
+  instrument   Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  instrumentId String
+  timeframe    String
+  timestamp    BigInt
+  open         Float
+  high         Float
+  low          Float
+  close        Float
+  volume       Float?
+  source       String
+
+  @@unique([instrumentId, timeframe, timestamp])
+  @@index([instrumentId, timeframe])
+}
+
+model ZoneRecord {
+  id              String     @id @default(cuid())
+  instrument      Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  instrumentId    String
+  timeframe       String
+  type            String     // 'SUPPLY' | 'DEMAND'
+  high            Float
+  low             Float
+  quality         Float
+  touches         Int
+  state           String     // 'FRESH' | 'TESTED' | 'BROKEN' | 'MITIGATED'
+  style           String     // 'FULL_WICK' | 'CANDLE_BODY' | 'BASE_RANGE'
+  createdAt       DateTime   @default(now())
+  candleTimestamp BigInt
+
+  @@index([instrumentId, timeframe, state])
+}
+
+model StructureEventRecord {
+  id             String     @id @default(cuid())
+  instrument     Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  instrumentId   String
+  timeframe      String
+  type           String     // 'BOS' | 'CHOCH'
+  structureType  String     // 'HH' | 'HL' | 'LH' | 'LL'
+  level          String     // 'INTERNAL' | 'EXTERNAL'
+  direction      String     // 'BULLISH' | 'BEARISH'
+  breakPrice     Float
+  referencePrice Float
+  timestamp      BigInt
+  confirmed      Boolean
+
+  @@index([instrumentId, timeframe, timestamp])
+}
+
+model LiquidityLevelRecord {
+  id           String     @id @default(cuid())
+  instrument   Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  instrumentId String
+  timeframe    String
+  type         String     // 'BUY_SIDE' | 'SELL_SIDE'
+  source       String
+  price        Float
+  state        String     // 'RESTING' | 'SWEPT' | 'INVALIDATED'
+  timestamp    BigInt
+  sweptAt      BigInt?
+  strength     Float
+
+  @@index([instrumentId, timeframe, state])
+}
+
+model SignalRecord {
+  id                    String     @id @default(cuid())
+  instrument            Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  instrumentId          String
+  direction             String?    // 'BUY' | 'SELL'
+  setupType             String?
+  lifecycle             String     // 'DETECTED' | 'CONFIRMED' | 'ACTIVE' | 'PARTIAL' | 'TP1_HIT' | 'TP2_HIT' | 'TP3_HIT' | 'STOP_HIT' | 'INVALIDATED' | 'EXPIRED' | 'CANCELLED'
+  status                String
+  entry                 Float?
+  stopLoss              Float?
+  tp1                   Float?
+  tp2                   Float?
+  tp3                   Float?
+  riskReward            Float?
+  confidence            Float
+  qualityTier           String
+  reasons               String     // JSON string
+  warnings              String     // JSON string
+  strategyVersion       String
+  dataSource            String
+  createdAt             DateTime   @default(now())
+  triggeredAt           DateTime?
+  invalidatedAt         DateTime?
+  expiredAt             DateTime?
+  outcome               String?    // 'WIN' | 'LOSS' | 'BREAKEVEN'
+  maxFavorableExcursion Float?
+  maxAdverseExcursion   Float?
+
+  journalEntry          JournalEntryRecord?
+
+  @@index([instrumentId, status, lifecycle])
+  @@index([createdAt])
+}
+
+model BacktestRecord {
+  id              String     @id @default(cuid())
+  instrument      Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+  instrumentId    String
+  config          String     // JSON string
+  metrics         String     // JSON string
+  trades          String     // JSON string
+  strategyVersion String
+  completedAt     DateTime
+  createdAt       DateTime   @default(now())
+}
+
+model JournalEntryRecord {
+  id                 String       @id @default(cuid())
+  symbol             String
+  direction          String
+  setupType          String
+  entryPrice         Float
+  stopLoss           Float
+  takeProfit         Float
+  result             String?
+  pnl                Float?
+  notes              String?
+  emotionalState     String?
+  ruleFollowingScore Int?
+  mistakeCategory    String?
+  linkedSignalId     String?      @unique
+  linkedSignal       SignalRecord? @relation(fields: [linkedSignalId], references: [id])
+  screenshotUrl      String?
+  createdAt          DateTime     @default(now())
+
+  @@index([symbol, createdAt])
+}
+
+model AppSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String   // JSON string
+  updatedAt DateTime @updatedAt
+}
