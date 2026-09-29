@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { createChart, ColorType, IChartApi, ISeriesApi, LineStyle, UTCTimestamp } from 'lightweight-charts';
+import { createChart, ColorType, CandlestickSeries, IChartApi, ISeriesApi, LineStyle, UTCTimestamp } from 'lightweight-charts';
 import type { Candle, Timeframe } from '@/lib/types/market';
 import type { SignalResult, Zone } from '@/lib/types/strategy';
 
@@ -90,7 +90,7 @@ export function TradingChart({
       },
     });
 
-    const candlestickSeries = (chart as any).addCandlestickSeries({
+    const candlestickSeries = chart.addSeries(CandlestickSeries, {
       upColor: '#10b981', // Emerald 500
       downColor: '#ef4444', // Red 500
       borderVisible: false,
