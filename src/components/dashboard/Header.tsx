@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { StatusDot } from '@/components/ui/StatusDot';
-import { Settings, BarChart2, BookOpen, History, RefreshCw } from 'lucide-react';
+import { Settings, BarChart2, BookOpen, History, RefreshCw, Bell, Volume2, VolumeX } from 'lucide-react';
 import Link from 'next/link';
 
 interface HeaderProps {
@@ -12,6 +12,10 @@ interface HeaderProps {
   dataFresh?: boolean;
   currentSession?: string;
   onRefresh?: () => void;
+  soundEnabled?: boolean;
+  onToggleSound?: () => void;
+  onRequestNotificationPermission?: () => void;
+  notificationPermission?: NotificationPermission;
 }
 
 export function Header({
@@ -21,22 +25,34 @@ export function Header({
   dataFresh = true,
   currentSession = 'London',
   onRefresh,
+  soundEnabled = true,
+  onToggleSound,
+  onRequestNotificationPermission,
+  notificationPermission = 'default',
 }: HeaderProps) {
-  const [utcTime, setUtcTime] = useState<string>('');
   const [istTime, setIstTime] = useState<string>('');
+  const [utcTime, setUtcTime] = useState<string>('');
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     const updateClock = () => {
       const now = new Date();
-      setUtcTime(now.toUTCString().slice(17, 25) + ' UTC');
-      // Asia/Kolkata timezone default (IST)
+      // IST (Indian Standard Time, Asia/Kolkata) - PRIMARY
       try {
-        const istStr = now.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour12: false });
+        const istStr = now.toLocaleTimeString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true,
+        });
         setIstTime(istStr + ' IST');
       } catch {
         setIstTime('');
       }
+
+      // UTC secondary
+      setUtcTime(now.toUTCString().slice(17, 25) + ' UTC');
     };
     updateClock();
     const interval = setInterval(updateClock, 1000);
@@ -81,8 +97,8 @@ export function Header({
         </div>
       </div>
 
-      {/* Navigation & Context */}
-      <div className="flex items-center space-x-4">
+      {/* Navigation, Time & Controls */}
+      <div className="flex items-center space-x-3 sm:space-x-4">
         {/* Market Session Indicator */}
         <div className="hidden sm:flex items-center space-x-1.5 px-2.5 py-1 rounded bg-slate-900 border border-slate-800">
           <span className="text-slate-500">Session:</span>
@@ -91,10 +107,48 @@ export function Header({
           </span>
         </div>
 
-        {/* Clocks */}
-        <div className="hidden md:flex flex-col items-end text-[11px] font-mono leading-tight">
-          <span className="text-slate-300 font-semibold">{utcTime}</span>
-          <span className="text-slate-500">{istTime}</span>
+        {/* Clocks: IST Primary, UTC Secondary */}
+        <div className="flex flex-col items-end leading-tight">
+          <span className="text-amber-400 font-mono font-bold text-xs tracking-wide flex items-center space-x-1">
+            <span>🇮🇳</span>
+            <span>{istTime || 'Loading IST...'}</span>
+          </span>
+          <span className="text-slate-500 font-mono text-[10px]">{utcTime}</span>
+        </div>
+
+        {/* Sound & Notification Alert Controls */}
+        <div className="flex items-center space-x-1 bg-slate-900/80 p-0.5 rounded border border-slate-800">
+          {onToggleSound && (
+            <button
+              onClick={onToggleSound}
+              title={soundEnabled ? 'Audio Chime Enabled for Confirmed Signals' : 'Audio Chime Muted'}
+              className={`p-1.5 rounded transition-colors ${
+                soundEnabled
+                  ? 'text-emerald-400 hover:bg-slate-800'
+                  : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              {soundEnabled ? <Volume2 className="w-3.5 h-3.5" /> : <VolumeX className="w-3.5 h-3.5" />}
+            </button>
+          )}
+
+          {onRequestNotificationPermission && (
+            <button
+              onClick={onRequestNotificationPermission}
+              title={
+                notificationPermission === 'granted'
+                  ? 'Browser Push Notifications Active'
+                  : 'Click to Enable Browser Notifications'
+              }
+              className={`p-1.5 rounded transition-colors ${
+                notificationPermission === 'granted'
+                  ? 'text-emerald-400 hover:bg-slate-800'
+                  : 'text-amber-400 hover:bg-slate-800 animate-pulse'
+              }`}
+            >
+              <Bell className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
 
         {/* Manual Refresh */}
@@ -109,7 +163,7 @@ export function Header({
         )}
 
         {/* Navigation Links */}
-        <nav className="flex items-center space-x-1 border-l border-slate-800 pl-3">
+        <nav className="flex items-center space-x-1 border-l border-slate-800 pl-2 sm:pl-3">
           <Link
             href="/signals"
             className="flex items-center space-x-1 px-2 py-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-100 transition-colors"
