@@ -19,7 +19,7 @@ interface WatchlistItem {
 }
 
 const DEFAULT_ITEMS: WatchlistItem[] = [
-  { symbol: 'XAU/USD', name: 'Gold Spot', price: 2655.40, change: 12.80, changePct: 0.48, status: 'live' },
+  { symbol: 'XAU/USD', name: 'Gold Spot', price: 4055.40, change: 12.80, changePct: 0.48, status: 'live' },
   { symbol: 'BTC/USD', name: 'Bitcoin', price: 65420.00, change: -480.00, changePct: -0.73, status: 'live' },
   { symbol: 'ETH/USD', name: 'Ethereum', price: 2680.50, change: 35.20, changePct: 1.33, status: 'live' },
   { symbol: 'SPY', name: 'S&P 500 ETF', price: 574.80, change: 2.40, changePct: 0.42, status: 'live' },

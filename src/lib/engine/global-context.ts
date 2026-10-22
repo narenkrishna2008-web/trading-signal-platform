@@ -40,7 +40,7 @@ export class GlobalContextEngine {
       us10y: { price: 3.74, change: -0.05, changePct: -1.32 },
       sp500: { price: 5760.50, change: 22.10, changePct: 0.38 },
       brentCrude: { price: 73.80, change: -0.50, changePct: -0.67 },
-      gold: { price: 2655.40, change: 12.80, changePct: 0.48 },
+      gold: { price: 4055.40, change: 12.80, changePct: 0.48 },
     };
 
     let dxyQuote = await providerManager.getLatestQuote('DXY');

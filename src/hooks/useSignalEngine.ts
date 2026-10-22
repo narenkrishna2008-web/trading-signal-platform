@@ -25,7 +25,7 @@ export function useSignalEngine(symbol: string = 'XAU/USD', timeframe: string = 
   const [bias, setBias] = useState<BiasAssessment | null>(null);
   const [globalContext, setGlobalContext] = useState<GlobalContextState | null>(null);
   const [macroContext, setMacroContext] = useState<MacroCalendarState | null>(null);
-  const [currentPrice, setCurrentPrice] = useState<number>(2650.0);
+  const [currentPrice, setCurrentPrice] = useState<number>(4055.0);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [dataSource, setDataSource] = useState<string>('Initializing...');
   const [dataFresh, setDataFresh] = useState<boolean>(true);
@@ -43,7 +43,7 @@ export function useSignalEngine(symbol: string = 'XAU/USD', timeframe: string = 
       setBias(data.bias || null);
       setGlobalContext(data.globalContext || null);
       setMacroContext(data.macroContext || null);
-      setCurrentPrice(data.currentPrice || 2650.0);
+      setCurrentPrice(data.currentPrice || 4055.0);
       setQuote(data.quote || null);
       setDataSource(data.dataSource || 'DEMO');
       setDataFresh(data.dataFresh ?? true);

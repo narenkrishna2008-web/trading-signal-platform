@@ -4,7 +4,7 @@ export class DemoDataProvider implements MarketDataProvider {
   readonly name = 'DEMO';
   readonly priority = 99; // Fallback provider
   
-  private currentPrice = 2650.00;
+  private currentPrice = 4055.00;
   private isInitialized = false;
   private quoteSubscribers: Map<string, Set<(quote: Quote) => void>> = new Map();
   private barSubscribers: Map<string, Map<Timeframe, Set<(candle: Candle) => void>>> = new Map();
@@ -167,9 +167,9 @@ export class DemoDataProvider implements MarketDataProvider {
     const change = (Math.random() - 0.5) * volatility;
     this.currentPrice += change;
     
-    // Keep price within realistic bounds
-    if (this.currentPrice < 2000) this.currentPrice = 2000;
-    if (this.currentPrice > 3000) this.currentPrice = 3000;
+    // Keep price within realistic bounds for Gold
+    if (this.currentPrice < 3800) this.currentPrice = 3800;
+    if (this.currentPrice > 4500) this.currentPrice = 4500;
 
     const spread = symbol === 'XAU/USD' ? 0.2 : 1.0;
     const mid = this.currentPrice;

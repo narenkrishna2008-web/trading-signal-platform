@@ -33,16 +33,16 @@ export default function JournalPage() {
   const [symbol, setSymbol] = useState('XAU/USD');
   const [direction, setDirection] = useState<'BUY' | 'SELL'>('BUY');
   const [setupType, setSetupType] = useState('15M Demand Retest + BOS');
-  const [entryPrice, setEntryPrice] = useState(2650.0);
-  const [stopLoss, setStopLoss] = useState(2644.0);
-  const [takeProfit, setTakeProfit] = useState(2665.0);
+  const [entryPrice, setEntryPrice] = useState(4068.5);
+  const [stopLoss, setStopLoss] = useState(4058.0);
+  const [takeProfit, setTakeProfit] = useState(4089.0);
   const [result, setResult] = useState<'WIN' | 'LOSS' | 'BREAKEVEN' | 'OPEN'>('WIN');
   const [pnl, setPnl] = useState(250);
   const [notes, setNotes] = useState('Clean 15M demand zone bounce after sell-side liquidity sweep. Waited for 15M engulfing confirmation.');
   const [emotionalState, setEmotionalState] = useState('Disciplined / Calm');
   const [ruleFollowingScore, setRuleFollowingScore] = useState(9);
   const [mistakeCategory, setMistakeCategory] = useState('None (Followed Plan)');
-  const [linkedSignalId, setLinkedSignalId] = useState('SIG-2026-00142');
+  const [linkedSignalId, setLinkedSignalId] = useState('SIG-2026-00188');
 
   const fetchEntries = async () => {
     try {
