@@ -17,16 +17,18 @@ export async function GET(request: NextRequest) {
     const fourWeeksMs = 28 * 24 * 60 * 60 * 1000;
     const fromTime = now - fourWeeksMs;
 
-    // Fetch 4H and 15M bars in parallel
-    const [bars4H, bars15M, quote, globalContext] = await Promise.all([
+    const limitForTf = executionTf === '5M' ? 150 : executionTf === '1H' ? 100 : executionTf === '4H' ? 80 : 120;
+
+    // Fetch 4H HTF and requested execution timeframe bars in parallel
+    const [bars4H, executionBars, quote, globalContext] = await Promise.all([
       providerManager.getHistoricalBars(symbol, '4H', fromTime, now, 80),
-      providerManager.getHistoricalBars(symbol, '15M', fromTime, now, 120),
+      providerManager.getHistoricalBars(symbol, executionTf as any, fromTime, now, limitForTf),
       providerManager.getLatestQuote(symbol),
       globalContextEngine.getGlobalContext(),
     ]);
 
     const activeProviderName = providerManager.getActiveProviderName();
-    const currentPrice = quote?.mid || (bars15M.length > 0 ? bars15M[bars15M.length - 1].close : 2650.0);
+    const currentPrice = quote?.mid || (executionBars.length > 0 ? executionBars[executionBars.length - 1].close : 4060.0);
     const macroState = macroCalendar.getCalendarState(now);
 
     const config = {
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
     // Run the deterministic signal engine
     const signal = evaluateMarket({
       candles4H: bars4H,
-      candles15M: bars15M,
+      candles15M: executionBars,
       currentPrice,
       symbol,
       config,
@@ -47,6 +49,12 @@ export async function GET(request: NextRequest) {
       dataFresh: isDataFresh,
       macroBlackout: macroState.isBlackoutActive,
     });
+
+    // Record into live signal store for history
+    if (signal.entry && signal.stopLoss) {
+      const { signalStore } = await import('@/lib/engine/signal-store');
+      signalStore.record(signal, executionTf);
+    }
 
     const checklist = generateChecklist(signal);
 

@@ -118,19 +118,33 @@ export function evaluateMarket(input: EvaluationInput): SignalResult {
   const liquidityLevels = detectLiquidityLevels(closed15M, swings15M, config);
   const liquiditySweeps = detectLiquiditySweeps(closed15M, liquidityLevels, config);
 
-  // Check displacement on latest closed candle
-  const latestClosed15M = closed15M[closed15M.length - 1];
-  const displacementEvent = latestClosed15M
-    ? detectDisplacement(latestClosed15M, atr15M, config)
-    : null;
+  // Check displacement across recent closed candles (last 5)
+  let displacementEvent: DisplacementEvent | null = null;
+  const recentClosedForDisp = closed15M.slice(-5);
+  for (let i = recentClosedForDisp.length - 1; i >= 0; i--) {
+    const d = detectDisplacement(recentClosedForDisp[i], atr15M, config);
+    if (d && d.confirmed) {
+      const matchesDir = !htfDirection || (htfDirection === 'BUY' ? d.direction === 'BULLISH' : d.direction === 'BEARISH');
+      if (matchesDir) {
+        displacementEvent = d;
+        break;
+      }
+    }
+  }
 
-  // Check candlestick patterns at the latest candle
-  const patterns = closed15M.length > 1
-    ? detectPatterns(closed15M, closed15M.length - 1)
-    : [];
+  // Check candlestick patterns on recent closed candles (last 3)
+  let relevantPattern: CandlePatternEvent | undefined;
+  for (let idx = closed15M.length - 1; idx >= Math.max(0, closed15M.length - 3); idx--) {
+    const patterns = detectPatterns(closed15M, idx);
+    const p = findRelevantPattern(patterns, htfDirection);
+    if (p) {
+      relevantPattern = p;
+      break;
+    }
+  }
 
   // ─── Find Active Zone ──────────────────────────────────────────────────
-  const activeZone = findActiveZone(allZones, currentPrice, htfDirection);
+  const activeZone = findActiveZone(allZones, currentPrice, htfDirection, atr15M);
 
   if (activeZone) {
     const freshLabel = activeZone.state === 'FRESH' ? 'Fresh' : 'Tested';
@@ -154,9 +168,9 @@ export function evaluateMarket(input: EvaluationInput): SignalResult {
 
   if (ltfStructureEvent) {
     reasons.push(makeReason('STRUCTURE', true,
-      `15M ${ltfStructureEvent.type} (${ltfStructureEvent.structureType}) confirmed at ${ltfStructureEvent.breakPrice.toFixed(2)}`, config));
+      `${config.executionTimeframe} ${ltfStructureEvent.type} (${ltfStructureEvent.structureType}) confirmed at ${ltfStructureEvent.breakPrice.toFixed(2)}`, config));
   } else {
-    reasons.push(makeReason('STRUCTURE', false, '15M structure confirmation pending', config));
+    reasons.push(makeReason('STRUCTURE', false, `${config.executionTimeframe} structure confirmation pending`, config));
   }
 
   // ─── Check Displacement ────────────────────────────────────────────────
@@ -168,17 +182,12 @@ export function evaluateMarket(input: EvaluationInput): SignalResult {
   }
 
   // ─── Check Candle Confirmation ─────────────────────────────────────────
-  const relevantPattern = findRelevantPattern(patterns, htfDirection);
-
   if (relevantPattern) {
     reasons.push(makeReason('CONFIRMATION', true,
       `${formatPatternName(relevantPattern.pattern)} confirmation at ${relevantPattern.candle.close.toFixed(2)}`, config));
   } else {
     reasons.push(makeReason('CONFIRMATION', false, 'Candlestick confirmation pending', config));
   }
-
-  // ─── Score Calculation ─────────────────────────────────────────────────
-  const totalScore = reasons.reduce((sum, r) => sum + r.score, 0);
 
   // ─── Entry / Stop / Target Calculation ─────────────────────────────────
   let entry: number | null = null;
@@ -189,53 +198,47 @@ export function evaluateMarket(input: EvaluationInput): SignalResult {
   let invalidationCondition: string | null = null;
   let setupType: SetupType | null = null;
 
-  // Determine setup type
-  if (htfDirection && activeZone && ltfStructureEvent) {
-    if (ltfStructureEvent.type === 'CHOCH') {
-      setupType = htfDirection === 'BUY' ? 'REVERSAL' : 'REVERSAL';
-    } else if (ltfStructureEvent.type === 'BOS') {
-      setupType = htfDirection === 'BUY' ? 'DEMAND_RETEST' : 'SUPPLY_RETEST';
-    }
-    if (activeZone.type === 'DEMAND' && htfDirection === 'BUY') {
+  // Determine setup type & execution levels
+  if (htfDirection) {
+    if (ltfStructureEvent?.type === 'CHOCH') {
+      setupType = 'REVERSAL';
+    } else if (activeZone?.type === 'DEMAND' && htfDirection === 'BUY') {
       setupType = 'DEMAND_RETEST';
-    } else if (activeZone.type === 'SUPPLY' && htfDirection === 'SELL') {
+    } else if (activeZone?.type === 'SUPPLY' && htfDirection === 'SELL') {
       setupType = 'SUPPLY_RETEST';
+    } else {
+      setupType = 'BREAKOUT_CONTINUATION';
     }
-  }
 
-  if (htfDirection && totalScore >= config.signal.minimumScore) {
+    // Proactive execution levels
     entry = currentPrice;
 
     if (htfDirection === 'BUY') {
-      const stopRef = activeZone ? activeZone.low : (latestClosed15M ? latestClosed15M.low : currentPrice * 0.995);
-      stopLoss = stopRef - (atr15M * config.risk.stopBufferAtr);
+      const stopRef = activeZone ? activeZone.low : (bias.lastSwingLow ? bias.lastSwingLow.price : currentPrice - (atr15M * 1.5));
+      stopLoss = Number((stopRef - (atr15M * config.risk.stopBufferAtr)).toFixed(2));
       invalidationPrice = stopLoss;
-      invalidationCondition = `15M close below ${stopLoss.toFixed(2)}`;
+      invalidationCondition = `${config.executionTimeframe} close below ${stopLoss.toFixed(2)}`;
 
-      const risk = entry - stopLoss;
-      if (risk > 0) {
-        takeProfits = generateTargets(entry, risk, htfDirection, swings15M, liquidityLevels);
-        riskReward = takeProfits.length > 1 ? takeProfits[1].rMultiple : (takeProfits.length > 0 ? takeProfits[0].rMultiple : null);
-      }
+      const risk = Math.max(1, entry - stopLoss);
+      takeProfits = generateTargets(entry, risk, 'BUY', swings15M, liquidityLevels);
+      riskReward = takeProfits.length > 1 ? takeProfits[1].rMultiple : 2.0;
     } else {
-      const stopRef = activeZone ? activeZone.high : (latestClosed15M ? latestClosed15M.high : currentPrice * 1.005);
-      stopLoss = stopRef + (atr15M * config.risk.stopBufferAtr);
+      const stopRef = activeZone ? activeZone.high : (bias.lastSwingHigh ? bias.lastSwingHigh.price : currentPrice + (atr15M * 1.5));
+      stopLoss = Number((stopRef + (atr15M * config.risk.stopBufferAtr)).toFixed(2));
       invalidationPrice = stopLoss;
-      invalidationCondition = `15M close above ${stopLoss.toFixed(2)}`;
+      invalidationCondition = `${config.executionTimeframe} close above ${stopLoss.toFixed(2)}`;
 
-      const risk = stopLoss - entry;
-      if (risk > 0) {
-        takeProfits = generateTargets(entry, risk, htfDirection, swings15M, liquidityLevels);
-        riskReward = takeProfits.length > 1 ? takeProfits[1].rMultiple : (takeProfits.length > 0 ? takeProfits[0].rMultiple : null);
-      }
+      const risk = Math.max(1, stopLoss - entry);
+      takeProfits = generateTargets(entry, risk, 'SELL', swings15M, liquidityLevels);
+      riskReward = takeProfits.length > 1 ? takeProfits[1].rMultiple : 2.0;
     }
   }
 
   // ─── R:R Gate ──────────────────────────────────────────────────────────
   if (riskReward !== null && riskReward >= config.risk.minimumRR) {
-    reasons.push(makeReason('RISK', true, `R:R ${riskReward.toFixed(1)} meets minimum ${config.risk.minimumRR}`, config));
+    reasons.push(makeReason('RISK', true, `R:R 1:${riskReward.toFixed(1)} meets minimum ${config.risk.minimumRR}`, config));
   } else if (riskReward !== null) {
-    reasons.push(makeReason('RISK', false, `R:R ${riskReward.toFixed(1)} below minimum ${config.risk.minimumRR}`, config));
+    reasons.push(makeReason('RISK', false, `R:R 1:${riskReward.toFixed(1)} below minimum ${config.risk.minimumRR}`, config));
     warnings.push('Risk/reward below minimum threshold');
   } else {
     reasons.push(makeReason('RISK', false, 'Unable to calculate R:R — no valid levels', config));
@@ -249,33 +252,24 @@ export function evaluateMarket(input: EvaluationInput): SignalResult {
   let lifecycle: SignalLifecycle = 'DETECTED';
 
   const rrValid = riskReward !== null && riskReward >= config.risk.minimumRR;
-  const passedReasons = reasons.filter(r => r.passed);
+  const candleConfirmed = !!relevantPattern;
 
-  if (finalScore >= config.signal.highConfluenceScore && rrValid && htfDirection) {
+  if (htfDirection && finalScore >= config.signal.highConfluenceScore && rrValid && candleConfirmed) {
     status = htfDirection === 'BUY' ? 'STRONG_BUY' : 'STRONG_SELL';
     qualityTier = 'HIGH_CONFLUENCE';
     lifecycle = 'CONFIRMED';
-  } else if (finalScore >= config.signal.minimumScore && rrValid && htfDirection) {
+  } else if (htfDirection && finalScore >= config.signal.minimumScore && rrValid && candleConfirmed) {
     status = htfDirection === 'BUY' ? 'BUY' : 'SELL';
     qualityTier = 'VALID';
     lifecycle = 'CONFIRMED';
-  } else if (htfDirection && passedReasons.length >= 2) {
+  } else if (htfDirection && (finalScore >= 35 || reasons.filter(r => r.passed).length >= 2)) {
     status = 'WAIT';
     qualityTier = 'WATCH';
     lifecycle = 'DETECTED';
-    // Clear entry/stop if not confirmed
-    entry = null;
-    stopLoss = null;
-    takeProfits = [];
-    riskReward = null;
   } else {
     status = 'NO_TRADE';
     qualityTier = 'NO_TRADE';
     lifecycle = 'DETECTED';
-    entry = null;
-    stopLoss = null;
-    takeProfits = [];
-    riskReward = null;
   }
 
   // ─── Build Result ──────────────────────────────────────────────────────
@@ -407,17 +401,32 @@ function createNoSignal(
   };
 }
 
-function findActiveZone(zones: Zone[], price: number, direction: SignalDirection | null): Zone | undefined {
-  const validZones = zones
-    .filter(z => z.state === 'FRESH' || z.state === 'TESTED')
-    .filter(z => {
-      if (direction === 'BUY') return z.type === 'DEMAND' && price >= z.low && price <= z.high * 1.002;
-      if (direction === 'SELL') return z.type === 'SUPPLY' && price <= z.high && price >= z.low * 0.998;
-      return price >= z.low && price <= z.high;
-    })
-    .sort((a, b) => b.quality.score - a.quality.score);
+function findActiveZone(zones: Zone[], price: number, direction: SignalDirection | null, atr: number = 10): Zone | undefined {
+  if (!zones || zones.length === 0) return undefined;
 
-  return validZones[0];
+  const validZones = zones.filter(z => z.state === 'FRESH' || z.state === 'TESTED');
+  if (validZones.length === 0) return undefined;
+
+  // Priority 1: Price is inside or within 0.75 ATR of zone boundary
+  const insideOrTouching = validZones.find(z => {
+    if (direction === 'BUY') return z.type === 'DEMAND' && price >= z.low - (atr * 0.75) && price <= z.high + (atr * 0.75);
+    if (direction === 'SELL') return z.type === 'SUPPLY' && price <= z.high + (atr * 0.75) && price >= z.low - (atr * 0.75);
+    return price >= z.low - (atr * 0.75) && price <= z.high + (atr * 0.75);
+  });
+  if (insideOrTouching) return insideOrTouching;
+
+  // Priority 2: Nearest active zone in trend direction (within 3.5 ATR)
+  const nearbyZones = validZones.filter(z => {
+    if (direction === 'BUY') return z.type === 'DEMAND' && z.high <= price + (atr * 3.5);
+    if (direction === 'SELL') return z.type === 'SUPPLY' && z.low >= price - (atr * 3.5);
+    return Math.abs((z.high + z.low) / 2 - price) <= (atr * 3.5);
+  }).sort((a, b) => {
+    const distA = Math.abs((a.high + a.low) / 2 - price);
+    const distB = Math.abs((b.high + b.low) / 2 - price);
+    return distA - distB;
+  });
+
+  return nearbyZones[0] || validZones[0];
 }
 
 function findRecentSweep(sweeps: LiquiditySweep[], direction: SignalDirection | null): LiquiditySweep | undefined {

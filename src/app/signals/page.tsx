@@ -23,11 +23,11 @@ interface SignalItem {
 }
 
 const DEFAULT_SIGNALS: SignalItem[] = [
-  { id: 'SIG-2026-00142', symbol: 'XAU/USD', direction: 'BUY', setupType: '15M Demand Retest', status: 'BUY', entry: 2648.20, stopLoss: 2642.50, tp1: 2656.75, tp2: 2662.50, confidence: 84, outcome: 'WIN', strategyVersion: 'XAU-SMC-1.0.0', createdAt: new Date(Date.now() - 3600000).toISOString() },
-  { id: 'SIG-2026-00141', symbol: 'XAU/USD', direction: 'SELL', setupType: 'Liquidity Sweep + CHOCH', status: 'STRONG_SELL', entry: 2665.40, stopLoss: 2670.00, tp1: 2658.50, tp2: 2653.90, confidence: 88, outcome: 'WIN', strategyVersion: 'XAU-SMC-1.0.0', createdAt: new Date(Date.now() - 14400000).toISOString() },
-  { id: 'SIG-2026-00140', symbol: 'XAU/USD', direction: 'BUY', setupType: 'Breakout Continuation', status: 'BUY', entry: 2638.10, stopLoss: 2633.00, tp1: 2645.75, tp2: 2650.80, confidence: 82, outcome: 'WIN', strategyVersion: 'XAU-SMC-1.0.0', createdAt: new Date(Date.now() - 86400000).toISOString() },
-  { id: 'SIG-2026-00139', symbol: 'XAU/USD', direction: 'SELL', setupType: 'Supply Retest', status: 'SELL', entry: 2652.80, stopLoss: 2657.00, tp1: 2646.50, tp2: 2642.30, confidence: 66, outcome: 'LOSS', strategyVersion: 'XAU-SMC-1.0.0', createdAt: new Date(Date.now() - 172800000).toISOString() },
-  { id: 'SIG-2026-00138', symbol: 'BTC/USD', direction: 'BUY', setupType: 'Demand Retest', status: 'BUY', entry: 64800.00, stopLoss: 63900.00, tp1: 66150.00, tp2: 67050.00, confidence: 80, outcome: 'WIN', strategyVersion: 'BTC-SMC-1.0.0', createdAt: new Date(Date.now() - 259200000).toISOString() },
+  { id: 'SIG-2026-00188', symbol: 'XAU/USD', direction: 'SELL', setupType: '15M Supply Retest + CHOCH', status: 'CONFIRMED', entry: 4068.50, stopLoss: 4078.20, tp1: 4053.95, tp2: 4044.25, confidence: 82, outcome: 'WIN', strategyVersion: 'XAU-SMC-1.0.0', createdAt: new Date(Date.now() - 3600000).toISOString() },
+  { id: 'SIG-2026-00187', symbol: 'XAU/USD', direction: 'SELL', setupType: '5M Liquidity Sweep + Displacement', status: 'CONFIRMED', entry: 4074.20, stopLoss: 4080.50, tp1: 4064.75, tp2: 4058.45, confidence: 79, outcome: 'WIN', strategyVersion: 'XAU-SMC-1.0.0', createdAt: new Date(Date.now() - 7200000).toISOString() },
+  { id: 'SIG-2026-00186', symbol: 'XAU/USD', direction: 'BUY', setupType: '1H Demand Zone Bounce', status: 'CONFIRMED', entry: 4048.80, stopLoss: 4038.50, tp1: 4064.25, tp2: 4074.55, confidence: 76, outcome: 'WIN', strategyVersion: 'XAU-SMC-1.0.0', createdAt: new Date(Date.now() - 14400000).toISOString() },
+  { id: 'SIG-2026-00185', symbol: 'XAU/USD', direction: 'SELL', setupType: '15M Breakdown Continuation', status: 'CONFIRMED', entry: 4082.40, stopLoss: 4089.00, tp1: 4072.50, tp2: 4065.90, confidence: 71, outcome: 'LOSS', strategyVersion: 'XAU-SMC-1.0.0', createdAt: new Date(Date.now() - 28800000).toISOString() },
+  { id: 'SIG-2026-00184', symbol: 'XAU/USD', direction: 'BUY', setupType: '4H Structure Shift + Demand Retest', status: 'CONFIRMED', entry: 4035.10, stopLoss: 4018.00, tp1: 4060.75, tp2: 4077.85, confidence: 88, outcome: 'WIN', strategyVersion: 'XAU-SMC-1.0.0', createdAt: new Date(Date.now() - 43200000).toISOString() },
 ];
 
 export default function SignalHistoryPage() {

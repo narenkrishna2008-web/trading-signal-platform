@@ -20,10 +20,10 @@ interface SignalHistoryItem {
 }
 
 const DEFAULT_SIGNALS: SignalHistoryItem[] = [
-  { id: 'SIG-2026-00142', timestamp: 'Today 14:15 UTC', direction: 'BUY', setupType: '15M Demand Retest', entry: 2648.20, stopLoss: 2642.50, tp2: 2662.50, outcome: 'WIN', rMultiple: '+2.5R', confidence: 84 },
-  { id: 'SIG-2026-00141', timestamp: 'Today 09:30 UTC', direction: 'SELL', setupType: 'Liquidity Sweep + CHOCH', entry: 2665.40, stopLoss: 2670.00, tp2: 2653.90, outcome: 'WIN', rMultiple: '+2.5R', confidence: 78 },
-  { id: 'SIG-2026-00140', timestamp: 'Yesterday 16:45 UTC', direction: 'BUY', setupType: 'Breakout Continuation', entry: 2638.10, stopLoss: 2633.00, tp2: 2650.80, outcome: 'WIN', rMultiple: '+2.5R', confidence: 82 },
-  { id: 'SIG-2026-00139', timestamp: 'Yesterday 11:15 UTC', direction: 'SELL', setupType: 'Supply Retest', entry: 2652.80, stopLoss: 2657.00, tp2: 2642.30, outcome: 'LOSS', rMultiple: '-1.0R', confidence: 66 },
+  { id: 'SIG-2026-00188', timestamp: 'Today 8:30 PM IST', direction: 'SELL', setupType: '15M Supply Retest + CHOCH', entry: 4068.50, stopLoss: 4078.20, tp2: 4044.25, outcome: 'WIN', rMultiple: '+2.5R', confidence: 82 },
+  { id: 'SIG-2026-00187', timestamp: 'Today 6:45 PM IST', direction: 'SELL', setupType: '5M Liquidity Sweep + Displacement', entry: 4074.20, stopLoss: 4080.50, tp2: 4058.45, outcome: 'WIN', rMultiple: '+2.5R', confidence: 79 },
+  { id: 'SIG-2026-00186', timestamp: 'Today 3:15 PM IST', direction: 'BUY', setupType: '1H Demand Zone Bounce', entry: 4048.80, stopLoss: 4038.50, tp2: 4074.55, outcome: 'WIN', rMultiple: '+2.5R', confidence: 76 },
+  { id: 'SIG-2026-00185', timestamp: 'Today 11:30 AM IST', direction: 'SELL', setupType: '15M Breakdown Continuation', entry: 4082.40, stopLoss: 4089.00, tp2: 4065.90, outcome: 'LOSS', rMultiple: '-1.0R', confidence: 71 },
 ];
 
 export function SignalHistory() {
@@ -38,14 +38,19 @@ export function SignalHistory() {
           if (Array.isArray(data) && data.length > 0) {
             const mapped: SignalHistoryItem[] = data.map((s: any) => ({
               id: s.id,
-              timestamp: new Date(s.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              timestamp: new Date(s.createdAt || Date.now()).toLocaleTimeString('en-IN', {
+                timeZone: 'Asia/Kolkata',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true,
+              }) + ' IST',
               direction: (s.direction as 'BUY' | 'SELL') || 'BUY',
-              setupType: s.setupType ? s.setupType.replace(/_/g, ' ') : 'SMC Setup',
-              entry: s.entry || 2650,
-              stopLoss: s.stopLoss || 2640,
-              tp2: s.tp2 || 2675,
+              setupType: s.setupType ? s.setupType.replace(/_/g, ' ') : `${s.timeframe || '15M'} SMC Setup`,
+              entry: s.entry || 4062.5,
+              stopLoss: s.stopLoss || 4050.0,
+              tp2: s.tp2 || 4085.0,
               outcome: (s.outcome as any) || 'ACTIVE',
-              rMultiple: s.outcome === 'WIN' ? '+2.5R' : s.outcome === 'LOSS' ? '-1.0R' : 'Active',
+              rMultiple: s.rMultiple || (s.outcome === 'WIN' ? '+2.5R' : s.outcome === 'LOSS' ? '-1.0R' : 'Active'),
               confidence: s.confidence || 75,
             }));
             setSignals(mapped);
@@ -53,7 +58,10 @@ export function SignalHistory() {
         }
       } catch {}
     };
+
     fetchSignals();
+    const interval = setInterval(fetchSignals, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -61,7 +69,7 @@ export function SignalHistory() {
       <CardHeader className="py-2.5 px-4 border-b border-slate-800/80 flex flex-row items-center justify-between shrink-0">
         <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center space-x-1.5">
           <History className="w-3.5 h-3.5 text-amber-400" />
-          <span>Recent Signal Execution</span>
+          <span>Today's Signal Executions (IST)</span>
         </CardTitle>
         <Link
           href="/signals"
@@ -100,7 +108,7 @@ export function SignalHistory() {
 
               <div className="flex items-center space-x-2 shrink-0">
                 <span className="text-[10px] font-mono text-slate-500">
-                  {item.confidence}/100
+                  {item.confidence}%
                 </span>
                 <span className={`font-mono font-bold text-xs ${
                   isWin ? 'text-emerald-400' : isLoss ? 'text-red-400' : 'text-blue-400'
